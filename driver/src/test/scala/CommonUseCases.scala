@@ -81,5 +81,15 @@ class CommonUseCases extends Specification {
       Await.ready(future, timeout)
       (future.value.get match { case Failure(e) => e.printStackTrace(); true; case _ => false }) mustEqual true
     }
+    "be able to fetch multiple documents by id" in {
+      val numberOfDocuments = 5
+      val ids = 1.to(numberOfDocuments).map(_ => BSONObjectID.generate)
+      Await.ready(Future.sequence(ids.map(id => BSONDocument("_id" -> id)).map(collection.insert(_))), timeout)
+      val idsAsStrings = ids.map(_.stringify)
+      val query = BSONDocument("_id" -> BSONDocument("$in" -> idsAsStrings))
+      println(BSONDocument.pretty(query))
+      val future = collection.find(query).cursor.collect[List]()
+      Await.result(future, timeout).size mustEqual numberOfDocuments
+    }
   }
 }
